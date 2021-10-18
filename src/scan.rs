@@ -65,3 +65,59 @@ pub fn get_library_information(library: &str, address: &mut libc::uintptr_t, siz
 
     false
 }
+
+pub fn get_pattern_data(pattern: &str) -> Vec<(u8, bool)> {
+    let mut buf = Vec::new();
+    for pattern in pattern.split(' ') {
+        buf.push(if pattern == "?" || pattern == "??" {
+            (0, true)
+        } else {
+            (u8::from_str_radix(pattern, 16).unwrap(), false)
+        });
+    }
+    
+    buf
+}
+
+pub fn compare_bytes(addr: *mut u8, pattern_data: &[(u8, bool)]) -> bool {
+    for (i, pattern) in pattern_data.iter().enumerate() {
+
+        if pattern.1 { continue }
+
+        unsafe {
+            let value = addr.offset(i as isize);
+            if *value != pattern.0 {
+                return false;
+            }
+        }
+    }
+    
+    true
+}
+
+pub fn find_matches(pattern: &str, addr: *mut u8, size: usize) -> Vec<*mut u8> {
+    let pattern_data = get_pattern_data(pattern);
+    let first_byte = pattern_data.first().unwrap();
+
+    if first_byte.1 {
+        log::error!("First pattern byte cannot be ?? or ?");
+        panic!();
+    }
+
+    if size < pattern_data.len() {
+        log::error!("Pattern size can't be greater than scan size");
+        panic!();
+    }
+
+    let mut data = Vec::new();
+    for i in 0..=(size - pattern_data.len()) {
+        unsafe {
+            let value = addr.offset(i as isize);
+            if *value == first_byte.0 && compare_bytes(value, &pattern_data) {
+                data.push(value);
+            }
+        }
+    }
+
+    data
+}
