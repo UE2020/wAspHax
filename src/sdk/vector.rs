@@ -3,7 +3,6 @@ use std::{
     slice::SliceIndex,
 };
 
-
 #[repr(C)]
 pub struct VMatrix {
     m: [f32; 16],

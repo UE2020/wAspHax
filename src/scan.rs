@@ -1,5 +1,5 @@
-use std::sync::Mutex;
 use std::ffi::CStr;
+use std::sync::Mutex;
 
 pub struct Dlinfo {
     pub library: String,
@@ -24,20 +24,28 @@ lazy_static::lazy_static! {
 }
 
 #[allow(non_snake_case)]
-unsafe extern "C" fn dl_iterate_phdr__fnptr(info: *mut libc::dl_phdr_info, _: usize, _: *mut libc::c_void) -> libc::c_int {
+unsafe extern "C" fn dl_iterate_phdr__fnptr(
+    info: *mut libc::dl_phdr_info,
+    _: usize,
+    _: *mut libc::c_void,
+) -> libc::c_int {
     let name = CStr::from_ptr((*info).dlpi_name);
     let name = name.to_str().unwrap();
     let name = name.to_owned();
     LIBRARIES.lock().unwrap().push(Dlinfo {
         library: name,
         address: ((*info).dlpi_addr + (*(*info).dlpi_phdr).p_vaddr) as libc::uintptr_t,
-        size: (*(*info).dlpi_phdr).p_memsz as libc::size_t
+        size: (*(*info).dlpi_phdr).p_memsz as libc::size_t,
     });
-    
-    return 0;
+
+    0
 }
 
-pub fn get_library_information(library: &str, address: &mut libc::uintptr_t, size: &mut usize) -> bool {
+pub fn get_library_information(
+    library: &str,
+    address: &mut libc::uintptr_t,
+    size: &mut usize,
+) -> bool {
     unsafe {
         let len = LIBRARIES.lock().unwrap().len();
         if len == 0 {
@@ -75,27 +83,26 @@ pub fn get_pattern_data(pattern: &str) -> Vec<(u8, bool)> {
             (u8::from_str_radix(pattern, 16).unwrap(), false)
         });
     }
-    
+
     buf
 }
 
-pub fn compare_bytes(addr: *mut u8, pattern_data: &[(u8, bool)]) -> bool {
+pub unsafe fn compare_bytes(addr: *mut u8, pattern_data: &[(u8, bool)]) -> bool {
     for (i, pattern) in pattern_data.iter().enumerate() {
+        if pattern.1 {
+            continue;
+        }
 
-        if pattern.1 { continue }
-
-        unsafe {
-            let value = addr.offset(i as isize);
-            if *value != pattern.0 {
-                return false;
-            }
+        let value = addr.add(i);
+        if *value != pattern.0 {
+            return false;
         }
     }
-    
+
     true
 }
 
-pub fn find_matches(pattern: &str, addr: *mut u8, size: usize) -> Vec<*mut u8> {
+pub unsafe fn find_matches(pattern: &str, addr: *mut u8, size: usize) -> Vec<*mut u8> {
     let pattern_data = get_pattern_data(pattern);
     let first_byte = pattern_data.first().unwrap();
 
@@ -111,13 +118,38 @@ pub fn find_matches(pattern: &str, addr: *mut u8, size: usize) -> Vec<*mut u8> {
 
     let mut data = Vec::new();
     for i in 0..=(size - pattern_data.len()) {
-        unsafe {
-            let value = addr.offset(i as isize);
-            if *value == first_byte.0 && compare_bytes(value, &pattern_data) {
-                data.push(value);
-            }
+        let value = addr.add(i);
+        if *value == first_byte.0 && compare_bytes(value, &pattern_data) {
+            data.push(value);
         }
     }
 
     data
+}
+
+pub unsafe fn find_matches_in_module(module_name: &str, pattern: &str) -> Option<Vec<*mut u8>> {
+    let mut base_address = 0;
+    let mut mem_size = 0;
+
+    if !get_library_information(module_name, &mut base_address, &mut mem_size) {
+        log::warn!("Couldn't find info for library {}", module_name);
+        return None;
+    }
+
+    Some(find_matches(pattern, base_address as *mut u8, mem_size))
+}
+
+pub unsafe fn find_first_in_module(module_name: &str, pattern: &str) -> Option<*mut u8> {
+    let matches = find_matches_in_module(module_name, pattern);
+
+    match matches {
+        Some(matches) => {
+            if matches.is_empty() {
+                None
+            } else {
+                Some(matches[0])
+            }
+        }
+        None => None,
+    }
 }

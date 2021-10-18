@@ -2,16 +2,16 @@
 
 use ctor::*;
 use std::time::Duration;
-use std::{thread, mem::transmute};
+use std::{mem::transmute, thread};
 
 use std::ffi::CString;
 
+pub mod scan;
 pub mod sdk;
 pub mod util;
-pub mod scan;
 
-use simplelog::*;
 use log::*;
+use simplelog::*;
 
 use std::fs::File;
 
@@ -33,14 +33,18 @@ fn main_thread() {
     debug!("Game loaded");
 
     info!("Getting entitylist interface");
-    let interface_ptr: *mut usize = sdk::interfaces::get_interface("./csgo/bin/linux64/client_client.so", "VClientEntityList", false);
+    let interface_ptr: *mut usize = sdk::interfaces::get_interface(
+        "./csgo/bin/linux64/client_client.so",
+        "VClientEntityList",
+        false,
+    );
     info!("Got entitylist {:p}", interface_ptr);
 
     unsafe {
         let entitylist = sdk::interfaces::entitylist::CEntityList::from_raw(interface_ptr);
         let entity = entitylist.get_client_entity(3);
         info!("Got entity: {:p}", entity);
-        
+
         let entity = sdk::entity::CEntity::from_raw(entity);
         loop {
             *entity.get_origin() = cgmath::vec3(-1764.8489, -701.32983, 129.02765);

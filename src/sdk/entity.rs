@@ -15,9 +15,7 @@ type DormantFn = unsafe extern "thiscall" fn(thisptr: *mut usize) -> bool;
 
 impl CEntity {
     pub fn get_value<T>(&self, offset: usize) -> T {
-        unsafe {
-           ((self.base as usize + offset) as *mut T).read()
-        }
+        unsafe { ((self.base as usize + offset) as *mut T).read() }
     }
 
     pub fn is_empty(&self) -> bool {
@@ -25,9 +23,7 @@ impl CEntity {
     }
 
     pub unsafe fn from_raw(base: *mut usize) -> Self {
-        Self {
-            base,
-        }
+        Self { base }
     }
 
     pub fn networkable(&self) -> *mut usize {
@@ -47,7 +43,10 @@ impl CEntity {
     }
 
     pub fn get_aim_punch(&self) -> Vector3<f32> {
-        self.get_value(netvars::get_netvar_offset!("DT_BasePlayer", "m_aimPunchAngle"))
+        self.get_value(netvars::get_netvar_offset!(
+            "DT_BasePlayer",
+            "m_aimPunchAngle"
+        ))
     }
 
     pub fn is_scoped(&self) -> bool {
@@ -56,7 +55,10 @@ impl CEntity {
 
     #[deprecated]
     pub fn is_defusing(&self) -> bool {
-        self.get_value(netvars::get_netvar_offset!("DT_BasePlayer", "m_bIsDefusing"))
+        self.get_value(netvars::get_netvar_offset!(
+            "DT_BasePlayer",
+            "m_bIsDefusing"
+        ))
     }
 
     pub fn get_team_num(&self) -> i32 {
@@ -64,25 +66,22 @@ impl CEntity {
     }
 
     pub fn get_origin(&self) -> *mut Vector3<f32> {
-        unsafe {
-            transmute::<_, OriginFn>(get_virtual_function(self.base, 12))(self.base)
-        }
+        unsafe { transmute::<_, OriginFn>(get_virtual_function(self.base, 12))(self.base) }
     }
 
     pub fn get_velocity(&self) -> Vector3<f32> {
-        self.get_value(netvars::get_netvar_offset!("DT_BasePlayer", "m_vecVelocity[0]"))
+        self.get_value(netvars::get_netvar_offset!(
+            "DT_BasePlayer",
+            "m_vecVelocity[0]"
+        ))
     }
 
     pub fn is_dormant(&self) -> bool {
-        unsafe {
-            transmute::<_, DormantFn>(get_virtual_function(self.base, 9))(self.base)
-        }
+        unsafe { transmute::<_, DormantFn>(get_virtual_function(self.base, 9))(self.base) }
     }
 
     pub fn is_player(&self) -> bool {
-        unsafe {
-            transmute::<_, IsPlayerFn>(get_virtual_function(self.base, 157))(self.base)
-        }
+        unsafe { transmute::<_, IsPlayerFn>(get_virtual_function(self.base, 157))(self.base) }
     }
 
     #[deprecated]
