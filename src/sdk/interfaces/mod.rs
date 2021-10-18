@@ -11,6 +11,7 @@ macro_rules! c_str {
 
 type InstantiateInterfaceFn = unsafe extern "C" fn() -> *mut usize;
 
+#[repr(C)]
 struct InterfaceReg {
     m_CreateFn: InstantiateInterfaceFn,
     m_pName: *const libc::c_char,
