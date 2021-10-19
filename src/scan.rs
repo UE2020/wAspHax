@@ -20,6 +20,7 @@ impl Default for Dlinfo {
 unsafe impl Send for Dlinfo {}
 
 lazy_static::lazy_static! {
+    /// Global library map.
     pub static ref LIBRARIES: Mutex<Vec<Dlinfo>> = Mutex::new(Vec::new());
 }
 
@@ -41,6 +42,7 @@ unsafe extern "C" fn dl_iterate_phdr__fnptr(
     0
 }
 
+/// Get information about a library.
 pub fn get_library_information(
     library: &str,
     address: &mut libc::uintptr_t,
@@ -74,6 +76,7 @@ pub fn get_library_information(
     false
 }
 
+/// Parse a pattern string.
 pub fn get_pattern_data(pattern: &str) -> Vec<(u8, bool)> {
     let mut buf = Vec::new();
     for pattern in pattern.split(' ') {
@@ -87,6 +90,7 @@ pub fn get_pattern_data(pattern: &str) -> Vec<(u8, bool)> {
     buf
 }
 
+/// Compare data and pattern.
 pub unsafe fn compare_bytes(addr: *mut u8, pattern_data: &[(u8, bool)]) -> bool {
     for (i, pattern) in pattern_data.iter().enumerate() {
         if pattern.1 {
@@ -102,6 +106,7 @@ pub unsafe fn compare_bytes(addr: *mut u8, pattern_data: &[(u8, bool)]) -> bool 
     true
 }
 
+/// Find all matches in a memory region, given a pattern and a size.
 pub unsafe fn find_matches(pattern: &str, addr: *mut u8, size: usize) -> Vec<*mut u8> {
     let pattern_data = get_pattern_data(pattern);
     let first_byte = pattern_data.first().unwrap();
@@ -127,6 +132,7 @@ pub unsafe fn find_matches(pattern: &str, addr: *mut u8, size: usize) -> Vec<*mu
     data
 }
 
+/// Find all matches in a module, given the module name and the pattern.
 pub unsafe fn find_matches_in_module(module_name: &str, pattern: &str) -> Option<Vec<*mut u8>> {
     let mut base_address = 0;
     let mut mem_size = 0;
@@ -139,6 +145,7 @@ pub unsafe fn find_matches_in_module(module_name: &str, pattern: &str) -> Option
     Some(find_matches(pattern, base_address as *mut u8, mem_size))
 }
 
+/// Find first match in a module. This calls `find_matches_in_module` internally.
 pub unsafe fn find_first_in_module(module_name: &str, pattern: &str) -> Option<*mut u8> {
     let matches = find_matches_in_module(module_name, pattern);
 

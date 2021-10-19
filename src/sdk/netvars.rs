@@ -18,6 +18,7 @@ impl NetvarPair {
 }
 
 lazy_static::lazy_static! {
+    /// Global netvars map
     pub static ref OFFSETS: Mutex<HashMap<NetvarPair, usize>> = Mutex::new(hashmap!{
         /* Entity */
         NetvarPair::new("DT_BaseEntity", "m_Collision") => 0,
@@ -80,6 +81,7 @@ lazy_static::lazy_static! {
     });
 }
 
+/// Lock the global netvars map and retreive a netvar.
 #[macro_export]
 macro_rules! get_netvar_offset {
     ($table: expr, $prop: expr) => {
@@ -92,3 +94,8 @@ macro_rules! get_netvar_offset {
 }
 
 pub(crate) use get_netvar_offset;
+
+
+pub fn init() {
+    log::info!("Initialising Netvars...");
+}

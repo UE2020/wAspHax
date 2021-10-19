@@ -12,7 +12,6 @@ macro_rules! c_str {
 type InstantiateInterfaceFn = unsafe extern "C" fn() -> *mut usize;
 
 #[repr(C)]
-#[allow(non_snake_case)]
 struct InterfaceReg {
     m_CreateFn: InstantiateInterfaceFn,
     m_pName: *const libc::c_char,
@@ -23,36 +22,23 @@ pub fn get_interface<T>(file: &str, name: &str, include_version: bool) -> *mut T
     log::debug!("get_interface({}, {}, {})", file, name, include_version);
     let file = CString::new(file).unwrap();
     unsafe {
-        let lib = libc::dlopen(
-            file.as_ptr(),
-            libc::RTLD_NOLOAD | libc::RTLD_NOW | libc::RTLD_LOCAL,
-        );
+        let lib = libc::dlopen(file.as_ptr(), libc::RTLD_NOLOAD | libc::RTLD_NOW | libc::RTLD_LOCAL);
         if !lib.is_null() {
-            let interface_reg = *transmute::<*mut libc::c_void, *mut *mut InterfaceReg>(
-                libc::dlsym(lib, c_str!("s_pInterfaceRegs").as_ptr()),
-            );
+            let temp = c_str!("s_pInterfaceRegs").as_ptr();
+            let interface_reg = *transmute::<*mut libc::c_void, *mut *mut InterfaceReg>(libc::dlsym(lib, temp));
 
             let c_name = CString::new(name).unwrap();
-
+            
             let mut cur = interface_reg;
             loop {
                 if cur.is_null() {
                     break;
                 }
 
-                if (!libc::strstr((*cur).m_pName, c_name.as_ptr()).is_null()
-                    && c_name.as_bytes().len() - 3 == c_name.as_bytes().len())
-                    || (include_version
-                        && (!libc::strstr((*cur).m_pName, c_name.as_ptr()).is_null()
-                            && c_name.as_bytes().len() == c_name.as_bytes().len()))
-                {
+                if (!libc::strstr((*cur).m_pName, c_name.as_ptr()).is_null() && libc::strlen((*cur).m_pName)-3 == libc::strlen(c_name.as_ptr())) || 
+                    (include_version && (!libc::strstr((*cur).m_pName, c_name.as_ptr()).is_null() && libc::strlen((*cur).m_pName) == libc::strlen(c_name.as_ptr()))) {
                     let iface: *mut T = transmute::<*mut usize, *mut T>(((*cur).m_CreateFn)());
-                    log::debug!(
-                        "{} ({:?}) {:p}",
-                        name,
-                        CStr::from_ptr((*cur).m_pName),
-                        iface
-                    );
+                    log::debug!("{} ({:?}) {:p}", name, CStr::from_ptr((*cur).m_pName), iface);
                     return iface;
                 }
 
@@ -61,5 +47,6 @@ pub fn get_interface<T>(file: &str, name: &str, include_version: bool) -> *mut T
         }
         libc::dlclose(lib);
     }
-    todo!()
+    
+    panic!("Failed to get interface");
 }

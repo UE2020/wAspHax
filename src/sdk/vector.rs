@@ -1,6 +1,5 @@
 use std::{
     ops::{Index, IndexMut},
-    slice::SliceIndex,
 };
 
 #[repr(C)]

@@ -32,6 +32,9 @@ fn main_thread() {
 
     debug!("Game loaded");
 
+    // Initialize netvars
+    sdk::netvars::init();
+
     info!("Getting entitylist interface");
     let interface_ptr: *mut usize = sdk::interfaces::get_interface(
         "./csgo/bin/linux64/client_client.so",
@@ -44,13 +47,13 @@ fn main_thread() {
         let entitylist = sdk::interfaces::entitylist::CEntityList::from_raw(interface_ptr);
         let entity = entitylist.get_client_entity(3);
         info!("Got entity: {:p}", entity);
-
+    
         let entity = sdk::entity::CEntity::from_raw(entity);
-        loop {
-            *entity.get_origin() = cgmath::vec3(-1764.8489, -701.32983, 129.02765);
-            info!("Entity position: {:?}", *entity.get_origin());
-            thread::sleep(Duration::from_millis(100));
-        }
+        info!("entity.get_position() = {:?}", *entity.get_origin());
+        info!("entity.is_player() = {}", entity.is_player());
+        info!("entity.get_health() = {}", entity.get_health());
+        info!("entity.get_armor() = {}", entity.get_armor());
+        info!("entity.get_armor() = {}", entity.get_armor());
     }
 }
 
