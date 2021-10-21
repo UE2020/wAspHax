@@ -3,7 +3,7 @@
 
 use ctor::*;
 use std::time::Duration;
-use std::{mem::transmute, thread};
+use std::{thread};
 
 use std::ffi::CString;
 
@@ -26,12 +26,14 @@ pub struct ApplicationState {
 }
 
 fn main_thread() {
+    info!("Cheat injected");
     let path = CString::new("./bin/linux64/serverbrowser_client.so").unwrap();
     while unsafe { libc::dlopen(path.as_ptr(), libc::RTLD_NOLOAD | libc::RTLD_NOW).is_null() } {
+        debug!("Game not fully loaded, waiting 100 ms...");
         thread::sleep(Duration::from_millis(100));
     }
 
-    debug!("Game loaded");
+    info!("Game loaded");
 
     // Initialize netvars
     sdk::netvars::init();
