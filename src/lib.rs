@@ -1,4 +1,5 @@
 #![feature(abi_thiscall)]
+#![feature(untagged_unions)]
 
 use ctor::*;
 use std::time::Duration;
@@ -35,25 +36,16 @@ fn main_thread() {
     // Initialize netvars
     sdk::netvars::init();
 
-    info!("Getting entitylist interface");
-    let interface_ptr: *mut usize = sdk::interfaces::get_interface(
-        "./csgo/bin/linux64/client_client.so",
-        "VClientEntityList",
-        false,
-    );
-    info!("Got entitylist {:p}", interface_ptr);
-
     unsafe {
-        let entitylist = sdk::interfaces::entitylist::CEntityList::from_raw(interface_ptr);
-        let entity = entitylist.get_client_entity(3);
+        /*let entity = sdk::interfaces::INTERFACES.entitylist.get_client_entity(3);
         info!("Got entity: {:p}", entity);
-    
+
         let entity = sdk::entity::CEntity::from_raw(entity);
         info!("entity.get_position() = {:?}", *entity.get_origin());
         info!("entity.is_player() = {}", entity.is_player());
         info!("entity.get_health() = {}", entity.get_health());
         info!("entity.get_armor() = {}", entity.get_armor());
-        info!("entity.get_armor() = {}", entity.get_armor());
+        info!("entity.get_armor() = {}", entity.get_armor());*/
     }
 }
 

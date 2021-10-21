@@ -1,6 +1,4 @@
-use std::{
-    ops::{Index, IndexMut},
-};
+use std::ops::{Index, IndexMut};
 
 #[repr(C)]
 pub struct VMatrix {

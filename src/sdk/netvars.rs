@@ -1,6 +1,8 @@
+use libc::NFT_TABLE_MAXNAMELEN;
 use maplit::hashmap;
 use std::collections::HashMap;
 use std::sync::Mutex;
+use std::ffi::CStr;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct NetvarPair {
@@ -95,7 +97,67 @@ macro_rules! get_netvar_offset {
 
 pub(crate) use get_netvar_offset;
 
+use super::interfaces;
+
+unsafe fn find_offset(table: *mut interfaces::baseclient::CRecvTable, table_name: &str, netvar_name: &str) -> Option<usize> {
+    for i in 0..(*table).n_props {
+        let prop =  &*(*table).p_props.offset(i as isize);
+        
+        let cur_var_name = prop.prop_name;
+        let cur_var_name = CStr::from_ptr(cur_var_name);
+        let cur_var_name = cur_var_name.to_str().ok()?;
+
+        if cur_var_name == netvar_name {
+            return Some(prop.offset as usize);
+        }
+
+        if !prop.data_table.is_null() {
+            let offset = find_offset(prop.data_table, table_name, netvar_name);
+            if offset.is_some() {
+                return offset.map(|offset| offset + prop.offset as usize);
+            }
+        }
+    }
+
+    None
+}
+
+unsafe fn find_netvar_offset(table_name: &str, netvar_name: &str) -> Option<usize> {
+    let mut cur = interfaces::INTERFACES.baseclient.get_all_classes();
+    loop {
+        if cur.is_null() {
+            break;
+        }
+
+        let cur_table_name = (*(*cur).recv_table).table_name;
+        let cur_table_name = CStr::from_ptr(cur_table_name);
+        let cur_table_name = cur_table_name.to_str().ok()?;
+
+        if table_name == cur_table_name {
+            return find_offset((*cur).recv_table, table_name, netvar_name);
+        }
+
+        cur = (*cur).next;
+    }
+
+    None
+}
 
 pub fn init() {
     log::info!("Initialising Netvars...");
+
+    let mut netvars = OFFSETS.lock().unwrap();
+
+    for (pair, offset) in netvars.iter_mut() {
+        *offset = unsafe {
+            match find_netvar_offset(pair.first.as_str(), pair.second.as_str()) {
+                Some(offset) => offset,
+                None => {
+                    log::error!("Failed to find netvar {}::{}", pair.first, pair.second);
+                    0
+                }
+            }
+        };
+        log::info!("{}::{} = 0x{:X}", pair.first, pair.second, *offset);
+    }
 }
