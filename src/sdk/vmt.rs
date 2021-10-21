@@ -29,7 +29,8 @@ pub unsafe fn hook(instance: *mut isize, hook: *mut usize, offset: isize) -> *mu
     let original = *(entry as *mut isize);
 
     let original_protection = unprotect(entry as *mut usize);
-
     *(entry as *mut isize) = hook as isize;
-    todo!()
+    protect(entry as *mut usize, original_protection);
+
+    original as *mut usize
 }
