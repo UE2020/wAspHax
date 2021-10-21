@@ -1,8 +1,7 @@
-use libc::NFT_TABLE_MAXNAMELEN;
 use maplit::hashmap;
 use std::collections::HashMap;
-use std::sync::Mutex;
 use std::ffi::CStr;
+use std::sync::Mutex;
 
 #[derive(PartialEq, Eq, Hash)]
 pub struct NetvarPair {
@@ -99,10 +98,14 @@ pub(crate) use get_netvar_offset;
 
 use super::interfaces;
 
-unsafe fn find_offset(table: *mut interfaces::baseclient::CRecvTable, table_name: &str, netvar_name: &str) -> Option<usize> {
+unsafe fn find_offset(
+    table: *mut interfaces::baseclient::CRecvTable,
+    table_name: &str,
+    netvar_name: &str,
+) -> Option<usize> {
     for i in 0..(*table).n_props {
-        let prop =  &*(*table).p_props.offset(i as isize);
-        
+        let prop = &*(*table).p_props.offset(i as isize);
+
         let cur_var_name = prop.prop_name;
         let cur_var_name = CStr::from_ptr(cur_var_name);
         let cur_var_name = cur_var_name.to_str().ok()?;
