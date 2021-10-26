@@ -3,6 +3,8 @@ use std::mem::transmute;
 
 pub mod baseclient;
 pub mod entitylist;
+pub mod surface;
+pub mod panel;
 
 macro_rules! c_str {
     ($lit:expr) => {
@@ -68,6 +70,8 @@ pub fn get_interface<T>(file: &str, name: &str, include_version: bool) -> *mut T
 pub struct Interfaces {
     pub baseclient: baseclient::CBaseClient,
     pub entitylist: entitylist::CEntityList,
+    pub surface: surface::CSurface,
+    pub panel: panel::CPanel,
 }
 
 unsafe impl Send for Interfaces {}
@@ -86,7 +90,17 @@ lazy_static::lazy_static! {
                 "./csgo/bin/linux64/client_client.so",
                 "VClientEntityList",
                 false,
-            ))
+            )),
+            surface: surface::CSurface::from_raw(get_interface(
+                "./bin/linux64/vguimatsurface_client.so",
+                "VGUI_Surface",
+                false,
+            )),
+            panel: panel::CPanel::from_raw(get_interface(
+                "./bin/linux64/vgui2_client.so",
+                "VGUI_Panel",
+                false,
+            )),
         }
     };
 }

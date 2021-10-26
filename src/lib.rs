@@ -37,6 +37,7 @@ fn main_thread() {
 
     // Initialize netvars
     sdk::netvars::init();
+    sdk::vmt::init();
 
     unsafe {
         /*let entity = sdk::interfaces::INTERFACES.entitylist.get_client_entity(3);
@@ -73,5 +74,6 @@ fn main() {
 
 #[dtor]
 fn unload() {
+    sdk::vmt::cleanup();
     debug!("Unloaded");
 }
