@@ -1,5 +1,6 @@
 #![feature(abi_thiscall)]
 #![feature(untagged_unions)]
+#![feature(const_raw_ptr_deref)]
 
 use ctor::*;
 use std::time::Duration;

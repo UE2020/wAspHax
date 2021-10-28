@@ -86,34 +86,44 @@ unsafe impl Send for Hook {}
 unsafe impl Sync for Hook {}
 
 lazy_static::lazy_static! {
+    pub static ref SDL_SWAP_WIN
     //pub static ref PAINT_TRAVERSE_HOOK: Mutex<Hook> = Mutex::new(Hook::new(paint_traverse as _, super::interfaces::INTERFACES.panel.base as *mut c_void, 41));
 }
 
-const fn relative_to_absolute<T>(addr: usize) -> T {
+const fn relative_to_absolute(addr: usize) -> usize {
     unsafe {
-        transmute::<isize, T>(addr as isize + 4 + *(addr as *mut i32) as isize)
+        transmute::<isize, usize>(addr as isize + 4 + *(addr as *mut i32) as isize)
     }
 }
 
 fn init_sdl() {
-    let lib_sdl = libc::dlopen(c_str!("libSDL2.so.0"), libc::RTLD_LAZY | libc::RTLD_NOLOAD);
+    unsafe {
+        let lib_sdl = libc::dlopen(c_str!("libSDL2.so.0").as_ptr(), libc::RTLD_LAZY | libc::RTLD_NOLOAD);
 
-    let swap_window_addr = relative_to_absolute(libc::dlsym(lib_sdl, c_str!("SDL_GL_SwapWindow")) as usize + 2);
-
-    if swap_window_addr == std::ptr::null_mut() {
-        log::error!("SDL_GL_SwapWindow not found");
-        return;
+        let swap_window_addr: usize = relative_to_absolute(libc::dlsym(lib_sdl, c_str!("SDL_GL_SwapWindow").as_ptr()) as usize + 2);
+        let swap_window_addr = swap_window_addr as *mut usize;
+        if swap_window_addr == std::ptr::null_mut() {
+            log::error!("SDL_GL_SwapWindow not found");
+            return;
+        } else {
+             
+        }
     }
 }
 
 pub fn init() {
     log::info!("Initializing hooks...");
+    
     //PAINT_TRAVERSE_HOOK.lock().unwrap().hook();
 }
 
 pub fn cleanup() {
     log::info!("Cleaning up hooks...");
     //PAINT_TRAVERSE_HOOK.lock().unwrap().unhook();
+}
+
+unsafe extern "C" fn swap_window_hook(window: *mut sdl2_sys::SDL_Window) {
+
 }
 
 /*type PaintTraverseFn = unsafe extern "C" fn(thisptr: *mut usize, other: *mut usize, panel: u32, force_repaint: bool, allow_force: bool);
