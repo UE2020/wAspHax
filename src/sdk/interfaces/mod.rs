@@ -9,6 +9,7 @@ pub mod panel;
 pub mod surface;
 pub mod debugoverlay;
 pub mod engine;
+pub mod vgui;
 
 type InstantiateInterfaceFn = unsafe extern "C" fn() -> *mut usize;
 
@@ -72,6 +73,8 @@ pub struct Interfaces {
     pub surface: surface::CSurface,
     pub panel: panel::CPanel,
     pub debug_overlay: debugoverlay::CDebugOverlay,
+    pub engine: engine::CEngineClient,
+    pub vgui: vgui::CEngineVGui,
 }
 
 unsafe impl Send for Interfaces {}
@@ -104,6 +107,16 @@ lazy_static::lazy_static! {
             debug_overlay: debugoverlay::CDebugOverlay::from_raw(get_interface(
                 "./bin/linux64/engine_client.so",
                 "VDebugOverlay",
+                false,
+            )),
+            engine: engine::CEngineClient::from_raw(get_interface(
+                "./bin/linux64/engine_client.so",
+                "VEngineClient",
+                false,
+            )),
+            vgui: vgui::CEngineVGui::from_raw(get_interface(
+                "./bin/linux64/engine_client.so",
+                "VEngineVGui",
                 false,
             )),
         }
