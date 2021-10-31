@@ -1,19 +1,18 @@
 use std::ffi::{CStr, CString};
 use std::mem::transmute;
 
+use crate::util::c_str;
+
 pub mod baseclient;
 pub mod entitylist;
-pub mod surface;
 pub mod panel;
-
-macro_rules! c_str {
-    ($lit:expr) => {
-        std::ffi::CStr::from_ptr(concat!($lit, "\0").as_ptr() as *const libc::c_char)
-    };
-}
+pub mod surface;
+pub mod debugoverlay;
+pub mod engine;
 
 type InstantiateInterfaceFn = unsafe extern "C" fn() -> *mut usize;
 
+#[allow(non_snake_case)]
 #[repr(C)]
 struct InterfaceReg {
     m_CreateFn: InstantiateInterfaceFn,
@@ -72,6 +71,7 @@ pub struct Interfaces {
     pub entitylist: entitylist::CEntityList,
     pub surface: surface::CSurface,
     pub panel: panel::CPanel,
+    pub debug_overlay: debugoverlay::CDebugOverlay,
 }
 
 unsafe impl Send for Interfaces {}
@@ -99,6 +99,11 @@ lazy_static::lazy_static! {
             panel: panel::CPanel::from_raw(get_interface(
                 "./bin/linux64/vgui2_client.so",
                 "VGUI_Panel",
+                false,
+            )),
+            debug_overlay: debugoverlay::CDebugOverlay::from_raw(get_interface(
+                "./bin/linux64/engine_client.so",
+                "VDebugOverlay",
                 false,
             )),
         }

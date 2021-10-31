@@ -48,6 +48,8 @@ lazy_static::lazy_static! {
         NetvarPair::new("DT_CSPlayer", "m_ArmorValue") => 0,
         NetvarPair::new("DT_BaseEntity", "m_nRenderMode") => 0, // Used for movetype
         NetvarPair::new("DT_CSPlayer", "m_nSurvivalTeam") => 0,
+        NetvarPair::new("DT_BasePlayer", "m_lifeState") => 0,
+        NetvarPair::new("DT_BaseEntity", "m_vecOrigin") => 0,
 
         /* Item */
         NetvarPair::new("DT_BaseAttributableItem", "m_iItemDefinitionIndex") => 0,

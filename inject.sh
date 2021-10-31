@@ -55,7 +55,7 @@ function load {
 function load_debug {
     echo "Loading cheat..."
     echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope
-    sudo cp target/release/libwasphax.so /usr/lib/$libname
+    sudo cp target/debug/libwasphax.so /usr/lib/$libname
     $gdb -n -q -batch \
         -ex "set auto-load safe-path /usr/lib:/usr/lib/" \
         -ex "attach $csgo_pid" \

@@ -1,8 +1,7 @@
-use std::mem::{self, transmute};
 use libc::c_void;
-use std::sync::Mutex;
+use std::mem::{self, transmute};
 
-use crate::util::c_str;
+use super::interfaces::surface::Color;
 
 #[allow(non_camel_case_types)]
 type intptr = libc::intptr_t;
@@ -47,7 +46,6 @@ pub unsafe fn hook(instance: *mut c_void, hook: *mut c_void, offset: i32) -> *mu
     original as *mut c_void
 }
 
-
 pub struct Hook {
     pub original: *mut c_void,
     pub hook: *mut c_void,
@@ -56,7 +54,7 @@ pub struct Hook {
 }
 
 impl Hook {
-    pub fn new(hook: *mut c_void, instance: *mut c_void, offset: i32) -> Self {
+    pub const fn new(hook: *mut c_void, instance: *mut c_void, offset: i32) -> Self {
         Self {
             original: std::ptr::null_mut(),
             hook: hook as *mut c_void,
@@ -68,7 +66,12 @@ impl Hook {
     pub fn hook(&mut self) {
         unsafe {
             self.original = hook(self.instance, self.hook, self.offset);
-            log::debug!("hook({:p}, {:p}, 0x{:X})", self.instance, self.hook, self.offset);
+            log::debug!(
+                "hook({:p}, {:p}, 0x{:X})",
+                self.instance,
+                self.hook,
+                self.offset
+            );
             log::debug!("self.original = {:p}", self.original);
         }
     }
@@ -77,7 +80,12 @@ impl Hook {
     pub fn unhook(&mut self) {
         unsafe {
             hook(self.instance, self.original, self.offset);
-            log::debug!("unhook({:p}, {:p}, 0x{:X})", self.instance, self.original, self.offset);
+            log::debug!(
+                "unhook({:p}, {:p}, 0x{:X})",
+                self.instance,
+                self.original,
+                self.offset
+            );
         }
     }
 }
@@ -85,56 +93,65 @@ impl Hook {
 unsafe impl Send for Hook {}
 unsafe impl Sync for Hook {}
 
+pub struct UnsafeHook(*mut Hook);
+
+unsafe impl Send for UnsafeHook {}
+unsafe impl Sync for UnsafeHook {}
+
 lazy_static::lazy_static! {
-    pub static ref SDL_SWAP_WIN
-    //pub static ref PAINT_TRAVERSE_HOOK: Mutex<Hook> = Mutex::new(Hook::new(paint_traverse as _, super::interfaces::INTERFACES.panel.base as *mut c_void, 41));
+    //pub static ref SDL_SWAP_WIN
+    pub static ref PAINT_TRAVERSE_HOOK: UnsafeHook = UnsafeHook(Box::into_raw(Box::new(Hook::new(paint_traverse as _, super::interfaces::INTERFACES.panel.base as *mut c_void, 42))));
+    pub static ref ESP_FONT: u64 = super::interfaces::surface::create_font(
+        "Andale Mono",
+        40,
+        10000,
+        0x80,
+    );
 }
 
-const fn relative_to_absolute(addr: usize) -> usize {
-    unsafe {
-        transmute::<isize, usize>(addr as isize + 4 + *(addr as *mut i32) as isize)
-    }
+/*const fn relative_to_absolute(addr: usize) -> usize {
+    unsafe { transmute::<isize, usize>(addr as isize + 4 + *(addr as *mut i32) as isize) }
 }
 
 fn init_sdl() {
     unsafe {
-        let lib_sdl = libc::dlopen(c_str!("libSDL2.so.0").as_ptr(), libc::RTLD_LAZY | libc::RTLD_NOLOAD);
+        let lib_sdl = libc::dlopen(
+            c_str!("libSDL2.so.0").as_ptr(),
+            libc::RTLD_LAZY | libc::RTLD_NOLOAD,
+        );
 
-        let swap_window_addr: usize = relative_to_absolute(libc::dlsym(lib_sdl, c_str!("SDL_GL_SwapWindow").as_ptr()) as usize + 2);
+        let swap_window_addr: usize = relative_to_absolute(
+            libc::dlsym(lib_sdl, c_str!("SDL_GL_SwapWindow").as_ptr()) as usize + 2,
+        );
         let swap_window_addr = swap_window_addr as *mut usize;
         if swap_window_addr == std::ptr::null_mut() {
             log::error!("SDL_GL_SwapWindow not found");
             return;
         } else {
-             
         }
     }
-}
+}*/
 
 pub fn init() {
     log::info!("Initializing hooks...");
-    
-    //PAINT_TRAVERSE_HOOK.lock().unwrap().hook();
+
+    unsafe { (*PAINT_TRAVERSE_HOOK.0).hook() }
 }
 
 pub fn cleanup() {
     log::info!("Cleaning up hooks...");
-    //PAINT_TRAVERSE_HOOK.lock().unwrap().unhook();
+    unsafe { (*PAINT_TRAVERSE_HOOK.0).unhook() }
 }
 
-unsafe extern "C" fn swap_window_hook(window: *mut sdl2_sys::SDL_Window) {
+//unsafe extern "C" fn swap_window_hook(window: *mut sdl2_sys::SDL_Window) {}
 
-}
+type PaintTraverseFn = unsafe extern "C" fn(thisptr: *mut usize, panel: u64, force_repaint: bool, allow_force: bool);
 
-/*type PaintTraverseFn = unsafe extern "C" fn(thisptr: *mut usize, other: *mut usize, panel: u32, force_repaint: bool, allow_force: bool);
-
-unsafe extern "C" fn paint_traverse(thisptr: *mut usize, other: *mut usize, panel: u32, force_repaint: bool, allow_force: bool) {
+unsafe extern "C" fn paint_traverse(thisptr: *mut usize, panel: u64, force_repaint: bool, allow_force: bool) {
     use std::ffi::CStr;
 
-    // W2ill be used for drawing
-    static mut PANEL_ID: u32 = 0;
-    // Will be implemented later for no scope
-    static mut PANEL_HUD_ID: u32 = 0;
+    static mut PANEL_ID: u64 = 0;
+    static mut PANEL_HUD_ID: u64 = 0;
 
     let interfaces = &super::interfaces::INTERFACES;
 
@@ -160,9 +177,27 @@ unsafe extern "C" fn paint_traverse(thisptr: *mut usize, other: *mut usize, pane
         }
     }
 
-    (transmute::<*mut c_void, PaintTraverseFn>(PAINT_TRAVERSE_HOOK.lock().unwrap().original))(thisptr, other, panel, force_repaint, allow_force);
+    (transmute::<*mut c_void, PaintTraverseFn>((*PAINT_TRAVERSE_HOOK.0).original))(thisptr, panel, force_repaint, allow_force);
 
     if PANEL_ID == panel {
-        super::interfaces::surface::draw_box(50, 50, 200, 200, super::interfaces::surface::Color::new_rgb(255, 0, 0));
+        super::interfaces::surface::draw_text(50, 50, "wAspHax v1.58-nightly", *ESP_FONT, Color::new_rgb(255, 0, 0));
+
+        for entity in super::interfaces::entitylist::get_all_players() {
+            let origin_w2s = super::interfaces::debugoverlay::world_to_screen(&entity.get_origin());
+
+            if !origin_w2s.is_some() {
+                continue;
+            }
+    
+            let height = 200;
+            let width = 200;
+    
+            let x1: i32 = origin_w2s.unwrap().x as i32;
+            let y1: i32 = origin_w2s.unwrap().y as i32;
+            let w: i32 = width;
+            let h: i32 = height;
+    
+            super::interfaces::surface::draw_box(x1, y1, w, h, Color::new_rgb(255, 0, 0));
+        }
     }
-}*/
+}

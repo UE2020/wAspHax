@@ -5,7 +5,7 @@ use cgmath::{vec3, Vector3};
 use std::mem::transmute;
 
 /// A wrapper on top of the entity blob.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct CEntity {
     base: *mut usize,
 }
@@ -76,8 +76,11 @@ impl CEntity {
     }
 
     /// Get the entity's origin.
-    pub fn get_origin(&self) -> *mut Vector3<f32> {
-        unsafe { transmute::<_, OriginFn>(get_virtual_function(self.base, 12))(self.base) }
+    pub fn get_origin(&self) -> Vector3<f32> {
+        self.get_value(netvars::get_netvar_offset!(
+            "DT_BaseEntity",
+            "m_vecOrigin"
+        ))
     }
 
     /// Get the entity's velocity.

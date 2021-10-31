@@ -3,8 +3,8 @@
 #![feature(const_raw_ptr_deref)]
 
 use ctor::*;
+use std::thread;
 use std::time::Duration;
-use std::{thread};
 
 use std::ffi::CString;
 

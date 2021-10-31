@@ -51,3 +51,23 @@ impl Default for CEntityList {
         }
     }
 }
+
+pub fn get_entity_by_id(id: i32) -> *mut usize {
+    let interfaces = &super::INTERFACES;
+    interfaces.entitylist.get_client_entity(id)
+}
+pub fn get_highest_entity_index() -> i32 {
+    let interfaces = &super::INTERFACES;
+    interfaces.entitylist.get_highest_entity_idx()
+}
+
+pub fn get_all_players() -> impl Iterator<Item=crate::sdk::entity::CEntity> {
+    (1..get_highest_entity_index())
+        .map(|i| unsafe { crate::sdk::entity::CEntity::from_raw(get_entity_by_id(i)) })
+        .filter(|&e| {
+            !e.is_empty()
+                && e.is_player()
+                && e.is_alive()
+                && !e.is_dormant()
+        })
+}
