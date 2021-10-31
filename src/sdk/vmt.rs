@@ -1,8 +1,11 @@
 use libc::c_void;
 use std::mem::{self, transmute};
 
-use super::interfaces::surface::Color;
 use super::interfaces;
+use super::interfaces::surface::Color;
+
+use super::classes;
+use super::entity;
 
 #[allow(non_camel_case_types)]
 type intptr = libc::intptr_t;
@@ -109,7 +112,6 @@ lazy_static::lazy_static! {
     );
 }
 
-
 pub fn init() {
     log::info!("Initializing hooks...");
 
@@ -124,9 +126,9 @@ pub fn cleanup() {
 #[derive(Clone, Copy)]
 #[repr(C)]
 enum PaintMode {
-	PAINT_UIPANELS = (1 << 0),
-	PAINT_INGAMEPANELS = (1 << 1),
-	PAINT_CURSOR = (1 << 2)
+    PAINT_UIPANELS = (1 << 0),
+    PAINT_INGAMEPANELS = (1 << 1),
+    PAINT_CURSOR = (1 << 2),
 }
 
 type PaintFn = unsafe extern "C" fn(thisptr: *mut usize, paint_mode: PaintMode);
@@ -138,36 +140,51 @@ unsafe extern "C" fn paint(thisptr: *mut usize, paint_mode: PaintMode) {
         return;
     }
 
-    let local_player = interfaces::INTERFACES.entitylist.get_client_entity(interfaces::INTERFACES.engine.get_local_player());
-    if local_player.is_null() {
-        return;
-    }
-
     if (paint_mode as i32 & PaintMode::PAINT_UIPANELS as i32) != 0 {
-        super::interfaces::surface::draw_text(50, 50, "wAspHax v1.58-nightly", *ESP_FONT, Color::new_rgb(255, 0, 0));
-        /*for i in 1..interfaces::entitylist::get_highest_entity_index() {
-            let entity = interfaces::entitylist::get_client_entity(i);
-            if entity.is_null() {
-                continue;
+        let local_player = interfaces::INTERFACES
+            .entitylist
+            .get_client_entity(interfaces::INTERFACES.engine.get_local_player());
+        if local_player.is_null() {
+            return;
+        }
+
+        interfaces::surface::draw_text(
+            50,
+            50,
+            "wAspHax v1.58-nightly",
+            *ESP_FONT,
+            Color::new_rgb(255, 0, 0),
+        );
+        let max_clients = interfaces::INTERFACES.engine.get_max_clients();
+        for i in 1..interfaces::entitylist::get_highest_entity_index() {
+            if i < max_clients {
+                let entity = entity::CEntity::from_raw(
+                    interfaces::INTERFACES.entitylist.get_client_entity(i),
+                );
+                if entity.is_empty() || entity.base == local_player {
+                    continue;
+                }
+
+                if entity.get_health() > 0 && !entity.is_dormant() {
+                    let head_w2s = interfaces::debugoverlay::world_to_screen(&entity.get_bone_pos(8));
+                    let origin_w2s = interfaces::debugoverlay::world_to_screen(&entity.get_origin());
+            
+                    if !head_w2s.is_some() || !origin_w2s.is_some() {
+                        continue;
+                    }
+            
+                    let height: i32 = (origin_w2s.unwrap().y - head_w2s.unwrap().y) as i32;
+                    let width = height / 2;
+            
+                    let x1: i32 = (head_w2s.unwrap().x - (width / 2) as f32) as i32;
+                    let y1: i32 = head_w2s.unwrap().y as i32;
+                    let w: i32 = width;
+                    let h: i32 = height;
+            
+                    interfaces::surface::draw_box(x1, y1, w, h, Color::new_rgb(255, 0, 0));
+                }   
             }
         }
-        for entity in super::interfaces::entitylist::get_all_players() {
-            let origin_w2s = super::interfaces::debugoverlay::world_to_screen(&entity.get_origin());
-
-            if !origin_w2s.is_some() {
-                continue;
-            }
-    
-            let height = 200;
-            let width = 200;
-    
-            let x1: i32 = origin_w2s.unwrap().x as i32;
-            let y1: i32 = origin_w2s.unwrap().y as i32;
-            let w: i32 = width;
-            let h: i32 = height;
-    
-            super::interfaces::surface::draw_box(x1, y1, w, h, Color::new_rgb(255, 0, 0));
-        }*/
     }
 }
 
@@ -214,15 +231,15 @@ unsafe extern "C" fn paint_traverse(thisptr: *mut usize, panel: u64, force_repai
             if !origin_w2s.is_some() {
                 continue;
             }
-    
+
             let height = 200;
             let width = 200;
-    
+
             let x1: i32 = origin_w2s.unwrap().x as i32;
             let y1: i32 = origin_w2s.unwrap().y as i32;
             let w: i32 = width;
             let h: i32 = height;
-    
+
             super::interfaces::surface::draw_box(x1, y1, w, h, Color::new_rgb(255, 0, 0));
         }
     }

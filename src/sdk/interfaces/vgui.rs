@@ -1,7 +1,3 @@
-use std::os::raw::c_char;
-
-use crate::util;
-
 #[derive(Debug)]
 pub struct CEngineVGui {
     pub base: *mut usize,

@@ -3,9 +3,7 @@ pub struct CGlowObjectManager {
     base: *mut usize,
 }
 
-impl CGlowObjectManager {
-
-}
+impl CGlowObjectManager {}
 
 #[allow(non_snake_case)]
 #[repr(C)]

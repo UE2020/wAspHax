@@ -7,11 +7,10 @@ use std::mem::transmute;
 /// A wrapper on top of the entity blob.
 #[derive(Copy, Clone, Debug)]
 pub struct CEntity {
-    base: *mut usize,
+    pub base: *mut usize,
 }
 
 type IsPlayerFn = unsafe extern "thiscall" fn(thisptr: *mut usize) -> bool;
-type OriginFn = unsafe extern "thiscall" fn(thisptr: *mut usize) -> *mut Vector3<f32>;
 type DormantFn = unsafe extern "thiscall" fn(thisptr: *mut usize) -> bool;
 
 impl CEntity {
@@ -33,7 +32,7 @@ impl CEntity {
     }
 
     pub fn networkable(&self) -> *mut usize {
-        self.get_value(16)
+        unsafe { transmute::<usize, *mut usize>(self.base as usize + 16) }
     }
 
     pub fn renderable(&self) -> *mut usize {
@@ -57,6 +56,13 @@ impl CEntity {
         ))
     }
 
+    pub fn collideable(&self) -> *mut usize {
+        self.get_value(netvars::get_netvar_offset!(
+            "DT_BaseEntity",
+            "m_Collision"
+        ))
+    }
+
     /// Check if the entity is scoped.
     pub fn is_scoped(&self) -> bool {
         self.get_value(netvars::get_netvar_offset!("DT_BasePlayer", "m_bIsScoped"))
@@ -77,10 +83,7 @@ impl CEntity {
 
     /// Get the entity's origin.
     pub fn get_origin(&self) -> Vector3<f32> {
-        self.get_value(netvars::get_netvar_offset!(
-            "DT_BaseEntity",
-            "m_vecOrigin"
-        ))
+        self.get_value(netvars::get_netvar_offset!("DT_BaseEntity", "m_vecOrigin"))
     }
 
     /// Get the entity's velocity.
@@ -93,7 +96,7 @@ impl CEntity {
 
     /// Check whether the entity is dormant.
     pub fn is_dormant(&self) -> bool {
-        unsafe { transmute::<_, DormantFn>(get_virtual_function(self.base, 9))(self.base) }
+        unsafe { transmute::<_, DormantFn>(get_virtual_function(self.networkable(), 9))(self.networkable()) }
     }
 
     /// Check whether the entity is a player.
@@ -101,13 +104,12 @@ impl CEntity {
         unsafe { transmute::<_, IsPlayerFn>(get_virtual_function(self.base, 157))(self.base) }
     }
 
-    #[deprecated]
     pub fn get_life_state(&self) -> i32 {
         self.get_value(netvars::get_netvar_offset!("DT_BasePlayer", "m_lifeState"))
     }
 
     pub fn is_alive(&self) -> bool {
-        self.get_life_state() == 0
+        self.get_health() > 0 && self.get_life_state() == 0
     }
 
     /// Get the bone matrix of the entity.
@@ -120,5 +122,37 @@ impl CEntity {
         let z = unsafe { *((ptr as usize + (bone as usize * 48 + 44)) as *mut f32) };
 
         vec3(x, y, z)
+    }
+
+    pub fn get_client_class(&self) -> *mut super::interfaces::baseclient::ClientClass {
+        unsafe {
+            type Fn =
+                unsafe extern "thiscall" fn(
+                    thisptr: *mut usize,
+                )
+                    -> *mut super::interfaces::baseclient::ClientClass;
+            transmute::<_, Fn>(get_virtual_function(self.base, 2))(self.base)
+        }
+    }
+}
+
+pub struct CClientNetworkable {
+    base: *mut usize,
+}
+
+impl CClientNetworkable {
+    pub unsafe fn from_raw(base: *mut usize) -> Self {
+        Self { base }
+    }
+
+    pub fn get_client_class(&self) -> *mut super::interfaces::baseclient::ClientClass {
+        unsafe {
+            type Fn =
+                unsafe extern "thiscall" fn(
+                    thisptr: *mut usize,
+                )
+                    -> *mut super::interfaces::baseclient::ClientClass;
+            transmute::<_, Fn>(get_virtual_function(self.base, 2))(self.base)
+        }
     }
 }

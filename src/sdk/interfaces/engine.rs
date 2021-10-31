@@ -28,7 +28,6 @@ pub struct CPlayerInfo {
     files_downloaded: u8,
 }
 
-
 #[derive(Debug)]
 pub struct CEngineClient {
     pub base: *mut usize,
@@ -44,7 +43,11 @@ impl CEngineClient {
             let mut x = 0;
             let mut y = 0;
             type Fn = unsafe extern "thiscall" fn(thisptr: *mut usize, x: *mut i32, y: *mut i32);
-            transmute::<_, Fn>(get_virtual_function(self.base, 5))(self.base, &mut x as _, &mut y as _);
+            transmute::<_, Fn>(get_virtual_function(self.base, 5))(
+                self.base,
+                &mut x as _,
+                &mut y as _,
+            );
             (x, y)
         }
     }
@@ -52,8 +55,16 @@ impl CEngineClient {
     pub fn get_player_info(&self, idx: i32) -> (bool, CPlayerInfo) {
         unsafe {
             let mut info = std::mem::zeroed();
-            type Fn = unsafe extern "thiscall" fn(thisptr: *mut usize, index: i32, info: *mut CPlayerInfo) -> bool;
-            let bool = transmute::<_, Fn>(get_virtual_function(self.base, 8))(self.base, idx, &mut info as _);
+            type Fn = unsafe extern "thiscall" fn(
+                thisptr: *mut usize,
+                index: i32,
+                info: *mut CPlayerInfo,
+            ) -> bool;
+            let bool = transmute::<_, Fn>(get_virtual_function(self.base, 8))(
+                self.base,
+                idx,
+                &mut info as _,
+            );
             (bool, info)
         }
     }
@@ -69,6 +80,13 @@ impl CEngineClient {
         unsafe {
             type Fn = unsafe extern "thiscall" fn(thisptr: *mut usize) -> i32;
             transmute::<_, Fn>(get_virtual_function(self.base, 12))(self.base)
+        }
+    }
+
+    pub fn get_max_clients(&self) -> i32 {
+        unsafe {
+            type Fn = unsafe extern "thiscall" fn(thisptr: *mut usize) -> i32;
+            transmute::<_, Fn>(get_virtual_function(self.base, 20))(self.base)
         }
     }
 

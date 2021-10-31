@@ -4,12 +4,13 @@ use std::mem::transmute;
 use crate::util::c_str;
 
 pub mod baseclient;
+pub mod debugoverlay;
+pub mod engine;
 pub mod entitylist;
 pub mod panel;
 pub mod surface;
-pub mod debugoverlay;
-pub mod engine;
 pub mod vgui;
+pub mod modelinfo;
 
 type InstantiateInterfaceFn = unsafe extern "C" fn() -> *mut usize;
 

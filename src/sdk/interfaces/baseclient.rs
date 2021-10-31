@@ -92,7 +92,7 @@ pub struct ClientClass {
     network_name: *mut libc::c_char,
     pub recv_table: *mut CRecvTable,
     pub next: *mut ClientClass,
-    pub class_id: i32,
+    pub class_id: crate::sdk::classes::EClassIds,
 }
 
 #[derive(Debug)]

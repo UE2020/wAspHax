@@ -1,5 +1,5 @@
-use std::os::raw::c_int;
 use std::ffi::CString;
+use std::os::raw::c_int;
 
 use crate::util;
 
@@ -45,10 +45,23 @@ type DrawFilledRectFn =
     unsafe extern "thiscall" fn(thisptr: *mut usize, x: i32, y: i32, x1: i32, y1: i32);
 type SetTextPosFn = unsafe extern "thiscall" fn(thisptr: *mut usize, x: i32, y: i32);
 type SetTextFontFn = unsafe extern "thiscall" fn(thisptr: *mut usize, font: u64);
-type SetTextColorFn = unsafe extern "thiscall" fn(thisptr: *mut usize, r: i32, g: i32, b: i32, a: i32);
-type PrintTextFn = unsafe extern "thiscall" fn(thisptr: *mut usize, text: *const u32, length: i32, unk: i32);
+type SetTextColorFn =
+    unsafe extern "thiscall" fn(thisptr: *mut usize, r: i32, g: i32, b: i32, a: i32);
+type PrintTextFn =
+    unsafe extern "thiscall" fn(thisptr: *mut usize, text: *const u32, length: i32, unk: i32);
 type CreateFontFn = unsafe extern "thiscall" fn(thisptr: *mut usize) -> u64;
-type SetFontGlyphsetFn = unsafe extern "thiscall" fn(thisptr: *mut usize, font: u64, name: *const libc::c_char, tall: i32, weight: i32, blur: i32, scanlines: i32, flags: i32, unk1: i32, unk2: i32) -> u64;
+type SetFontGlyphsetFn = unsafe extern "thiscall" fn(
+    thisptr: *mut usize,
+    font: u64,
+    name: *const libc::c_char,
+    tall: i32,
+    weight: i32,
+    blur: i32,
+    scanlines: i32,
+    flags: i32,
+    unk1: i32,
+    unk2: i32,
+) -> u64;
 type DrawOutlinedRectFn =
     unsafe extern "thiscall" fn(thisptr: *mut usize, x: i32, y: i32, x1: i32, y1: i32);
 
@@ -133,18 +146,36 @@ impl CSurface {
         let vfunc = unsafe {
             std::mem::transmute::<_, CreateFontFn>(util::get_virtual_function(self.base, 71))
         };
-        unsafe {
-            vfunc(self.base)
-        }
+        unsafe { vfunc(self.base) }
     }
 
-    pub fn set_font_glyphset(&self, font: u64, font_name: &str, tall: i32, weight: i32, blur: i32, scanlines: i32, flags: i32) -> u64 {
+    pub fn set_font_glyphset(
+        &self,
+        font: u64,
+        font_name: &str,
+        tall: i32,
+        weight: i32,
+        blur: i32,
+        scanlines: i32,
+        flags: i32,
+    ) -> u64 {
         let vfunc = unsafe {
             std::mem::transmute::<_, SetFontGlyphsetFn>(util::get_virtual_function(self.base, 72))
         };
         unsafe {
             let font_name: CString = CString::new(font_name).unwrap();
-            vfunc(self.base, font, font_name.as_ptr(), tall, weight, blur, scanlines, flags, 0, 0)
+            vfunc(
+                self.base,
+                font,
+                font_name.as_ptr(),
+                tall,
+                weight,
+                blur,
+                scanlines,
+                flags,
+                0,
+                0,
+            )
         }
     }
 
@@ -194,6 +225,8 @@ pub fn create_font(name: &str, size: i32, weight: i32, flag: i32) -> u64 {
     let interfaces = &super::INTERFACES;
 
     let font = interfaces.surface.create_font();
-    interfaces.surface.set_font_glyphset(font, name, size, weight, 0, 0, flag);
+    interfaces
+        .surface
+        .set_font_glyphset(font, name, size, weight, 0, 0, flag);
     font
 }
