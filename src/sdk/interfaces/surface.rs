@@ -212,6 +212,13 @@ pub fn draw_box(x: i32, y: i32, w: i32, h: i32, clr: Color) {
         .draw_outlined_rect(x + 1, y + 1, x + w - 1, y + h - 1);
 }
 
+pub fn draw_line(x: i32, y: i32, x2: i32, y2: i32, clr: Color) {
+    let interfaces = &super::INTERFACES;
+
+    interfaces.surface.set_draw_color(clr);
+    interfaces.surface.draw_line(x, y, x2, y2);
+}
+
 pub fn draw_text(x: i32, y: i32, text: &str, font: u64, clr: Color) {
     let interfaces = &super::INTERFACES;
 

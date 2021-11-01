@@ -30,7 +30,7 @@ fn main_thread() {
     info!("Cheat injected");
     let path = CString::new("./bin/linux64/serverbrowser_client.so").unwrap();
     while unsafe { libc::dlopen(path.as_ptr(), libc::RTLD_NOLOAD | libc::RTLD_NOW).is_null() } {
-        debug!("Game not fully loaded, waiting 100 ms...");
+        debug!("Game not fully loaded; waiting 100 ms...");
         thread::sleep(Duration::from_millis(100));
     }
 
@@ -38,19 +38,9 @@ fn main_thread() {
 
     // Initialize netvars
     sdk::netvars::init();
+
+    // Initialize hooks
     sdk::vmt::init();
-
-    unsafe {
-        /*let entity = sdk::interfaces::INTERFACES.entitylist.get_client_entity(3);
-        info!("Got entity: {:p}", entity);
-
-        let entity = sdk::entity::CEntity::from_raw(entity);
-        info!("entity.get_position() = {:?}", *entity.get_origin());
-        info!("entity.is_player() = {}", entity.is_player());
-        info!("entity.get_health() = {}", entity.get_health());
-        info!("entity.get_armor() = {}", entity.get_armor());
-        info!("entity.get_armor() = {}", entity.get_armor());*/
-    }
 }
 
 #[ctor]

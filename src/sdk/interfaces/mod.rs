@@ -76,6 +76,7 @@ pub struct Interfaces {
     pub debug_overlay: debugoverlay::CDebugOverlay,
     pub engine: engine::CEngineClient,
     pub vgui: vgui::CEngineVGui,
+    pub modelinfo: modelinfo::CModelInfo,
 }
 
 unsafe impl Send for Interfaces {}
@@ -118,6 +119,11 @@ lazy_static::lazy_static! {
             vgui: vgui::CEngineVGui::from_raw(get_interface(
                 "./bin/linux64/engine_client.so",
                 "VEngineVGui",
+                false,
+            )),
+            modelinfo: modelinfo::CModelInfo::from_raw(get_interface(
+                "./bin/linux64/engine_client.so",
+                "VModelInfoClient",
                 false,
             )),
         }

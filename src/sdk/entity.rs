@@ -36,7 +36,7 @@ impl CEntity {
     }
 
     pub fn renderable(&self) -> *mut usize {
-        self.get_value(0x8)
+        unsafe { transmute::<usize, *mut usize>(self.base as usize + 0x8) }
     }
 
     /// Get the health of the entity.
@@ -78,7 +78,7 @@ impl CEntity {
 
     /// Get the team ID of the entity.
     pub fn get_team_num(&self) -> i32 {
-        self.get_value(netvars::get_netvar_offset!("DT_BasePlayer", "m_iTeamNum"))
+        self.get_value(netvars::get_netvar_offset!("DT_BaseEntity", "m_iTeamNum"))
     }
 
     /// Get the entity's origin.
@@ -104,12 +104,28 @@ impl CEntity {
         unsafe { transmute::<_, IsPlayerFn>(get_virtual_function(self.base, 157))(self.base) }
     }
 
+    /// Get player life state
     pub fn get_life_state(&self) -> i32 {
         self.get_value(netvars::get_netvar_offset!("DT_BasePlayer", "m_lifeState"))
     }
 
+    /// Check if player is alive
     pub fn is_alive(&self) -> bool {
         self.get_health() > 0 && self.get_life_state() == 0
+    }
+
+    pub fn get_model(&self) -> *mut super::interfaces::modelinfo::CModel {
+        unsafe {
+            type Fn = unsafe extern "thiscall" fn(*mut usize) -> *mut super::interfaces::modelinfo::CModel;
+            transmute::<_, Fn>(get_virtual_function(self.renderable(), 8))(self.renderable())
+        }
+    }
+
+    pub fn setup_bones(&self, bone_matrix: *mut vecmath::Matrix3x4<f32>, max_bones: i32, bone_mask: i32, curtime: f32) -> bool {
+        unsafe {
+            type Fn = unsafe extern "thiscall" fn(*mut usize, *mut vecmath::Matrix3x4<f32>, i32, i32, f32) -> bool;
+            transmute::<_, Fn>(get_virtual_function(self.renderable(), 13))(self.renderable(), bone_matrix, max_bones, bone_mask, curtime)
+        }
     }
 
     /// Get the bone matrix of the entity.

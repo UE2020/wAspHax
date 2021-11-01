@@ -106,7 +106,7 @@ lazy_static::lazy_static! {
     pub static ref PAINT_HOOK: UnsafeHook = UnsafeHook(Box::into_raw(Box::new(Hook::new(paint as _, super::interfaces::INTERFACES.vgui.base as *mut c_void, 15))));
     pub static ref ESP_FONT: u64 = super::interfaces::surface::create_font(
         "Andale Mono",
-        40,
+        15,
         0,
         0x80,
     );
@@ -148,6 +148,8 @@ unsafe extern "C" fn paint(thisptr: *mut usize, paint_mode: PaintMode) {
             return;
         }
 
+        let local_player = entity::CEntity::from_raw(local_player);
+
         interfaces::surface::draw_text(
             50,
             50,
@@ -161,26 +163,47 @@ unsafe extern "C" fn paint(thisptr: *mut usize, paint_mode: PaintMode) {
                 let entity = entity::CEntity::from_raw(
                     interfaces::INTERFACES.entitylist.get_client_entity(i),
                 );
-                if entity.is_empty() || entity.base == local_player {
+                if entity.is_empty() || entity.base == local_player.base {
                     continue;
                 }
 
-                if entity.get_health() > 0 && !entity.is_dormant() {
-                    let head_w2s = interfaces::debugoverlay::world_to_screen(&entity.get_bone_pos(8));
-                    let origin_w2s = interfaces::debugoverlay::world_to_screen(&entity.get_origin());
-            
-                    if !head_w2s.is_some() || !origin_w2s.is_some() {
+                if entity.get_health() > 0 && !entity.is_dormant() && entity.get_team_num() != local_player.get_team_num() {
+                    // draw skeleton
+                    let model = interfaces::INTERFACES.modelinfo.get_studio_model(&*entity.get_model());
+                    if !model.is_null() {
+                        let mut bone_matrix: [vecmath::Matrix3x4<f32>; 128] = std::mem::zeroed(); // SAFETY: all values will be initialized
+                        if entity.setup_bones(&mut bone_matrix as _, 128, 0x00000100, 0.0) {
+                            let numbones = (*model).numbones;
+                            for i in 0..numbones {
+                                let bone = (*model).bone(i);
+                                if !bone.is_null() && ((*bone).flags & 0x00000100) != 0 && (*bone).parent != -1 {
+                                    let screen_bone_pos = interfaces::debugoverlay::world_to_screen(&cgmath::vec3(bone_matrix[i as usize][0][3], bone_matrix[i as usize][1][3], bone_matrix[i as usize][2][3]));
+                                    let screen_parent_bone_pos = interfaces::debugoverlay::world_to_screen(&cgmath::vec3(bone_matrix[(*bone).parent as usize][0][3], bone_matrix[(*bone).parent as usize][1][3], bone_matrix[(*bone).parent as usize][2][3]));
+                                    if screen_bone_pos.is_some() && screen_parent_bone_pos.is_some() {
+                                        interfaces::surface::draw_line(screen_bone_pos.unwrap().x as i32, screen_bone_pos.unwrap().y as i32, screen_parent_bone_pos.unwrap().x as i32, screen_parent_bone_pos.unwrap().y as i32, Color::new_rgb(255, 0, 0));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    let mut origin = entity.get_origin();
+                    origin.z += 50.0;
+                    let origin_w2s =
+                        super::interfaces::debugoverlay::world_to_screen(&origin);
+
+                    if !origin_w2s.is_some() {
                         continue;
                     }
-            
-                    let height: i32 = (origin_w2s.unwrap().y - head_w2s.unwrap().y) as i32;
-                    let width = height / 2;
-            
-                    let x1: i32 = (head_w2s.unwrap().x - (width / 2) as f32) as i32;
-                    let y1: i32 = head_w2s.unwrap().y as i32;
+
+                    let height = 50;
+                    let width = 50;
+
+                    let x1: i32 = origin_w2s.unwrap().x as i32 - 25;
+                    let y1: i32 = origin_w2s.unwrap().y as i32 - 25;
                     let w: i32 = width;
                     let h: i32 = height;
-            
+
                     interfaces::surface::draw_box(x1, y1, w, h, Color::new_rgb(255, 0, 0));
                 }   
             }
