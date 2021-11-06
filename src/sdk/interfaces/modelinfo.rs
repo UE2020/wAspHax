@@ -1,8 +1,8 @@
-use std::os::raw::c_char;
 use std::mem::transmute;
+use std::os::raw::c_char;
 
-use std::ffi::CString;
 use std::ffi::CStr;
+use std::ffi::CString;
 
 use crate::util;
 
@@ -13,7 +13,7 @@ pub struct StudioHdr {
     checksum: i32,
     name: [c_char; 64],
     length: i32,
-    
+
     eye_position: cgmath::Vector3<f32>,
     illumposition: cgmath::Vector3<f32>,
     hull_min: cgmath::Vector3<f32>,
@@ -34,7 +34,7 @@ pub struct StudioHdr {
     localanimindex: i32,
     numlocalseq: i32,
     localseqindex: i32,
-    
+
     activitylistversion: i32,
     eventsindexed: i32,
 
@@ -100,7 +100,7 @@ pub struct StudioHdr {
     pIndexBase: *mut usize,
 
     constdirectionallightdot: u8,
-    
+
     rootLOD: u8,
 
     numAllowedRootLODs: u8,
@@ -144,14 +144,17 @@ pub struct CStudioBone {
 
 impl StudioHdr {
     pub fn bone(&mut self, i: i32) -> *mut CStudioBone {
-        unsafe { ((self as *mut StudioHdr as *mut libc::c_uchar).offset(self.boneindex as isize) as
-                *mut CStudioBone).offset(i as isize) }
+        unsafe {
+            ((self as *mut StudioHdr as *mut libc::c_uchar).offset(self.boneindex as isize)
+                as *mut CStudioBone)
+                .offset(i as isize)
+        }
     }
 }
 
 #[repr(C)]
 pub struct CModel {
-    name: [i8; 255]
+    name: [i8; 255],
 }
 
 #[derive(Debug)]
@@ -175,7 +178,8 @@ impl CModelInfo {
     pub fn get_model_name(&self, model: &CModel) -> String {
         unsafe {
             type Fn = unsafe extern "thiscall" fn(*const usize, *const CModel) -> *const i8;
-            let result = transmute::<_, Fn>(util::get_virtual_function(self.base, 4))(self.base, model as _); 
+            let result =
+                transmute::<_, Fn>(util::get_virtual_function(self.base, 4))(self.base, model as _);
             let result = CStr::from_ptr(result as *mut i8);
             result.to_str().unwrap().to_owned()
         }

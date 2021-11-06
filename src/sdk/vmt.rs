@@ -104,6 +104,8 @@ unsafe impl Sync for UnsafeHook {}
 
 lazy_static::lazy_static! {
     pub static ref PAINT_HOOK: UnsafeHook = UnsafeHook(Box::into_raw(Box::new(Hook::new(paint as _, super::interfaces::INTERFACES.vgui.base as *mut c_void, 15))));
+    pub static ref CREATEMOVE_HOOK: UnsafeHook = UnsafeHook(Box::into_raw(Box::new(Hook::new(create_move as _, super::interfaces::INTERFACES.clientmode.base as *mut c_void, 25))));
+
     pub static ref ESP_FONT: u64 = super::interfaces::surface::create_font(
         "Andale Mono",
         15,
@@ -115,12 +117,42 @@ lazy_static::lazy_static! {
 pub fn init() {
     log::info!("Initializing hooks...");
 
-    unsafe { (*PAINT_HOOK.0).hook() }
+    unsafe {
+        (*PAINT_HOOK.0).hook();
+        (*CREATEMOVE_HOOK.0).hook();
+    }
 }
 
 pub fn cleanup() {
     log::info!("Cleaning up hooks...");
-    unsafe { (*PAINT_HOOK.0).unhook() }
+    unsafe {
+        (*PAINT_HOOK.0).unhook();
+        (*CREATEMOVE_HOOK.0).unhook();
+    }
+}
+
+type CreateMoveFn = unsafe extern "C" fn(
+    thisptr: *mut usize,
+    flInputSampleTime: f32,
+    cmd: *mut interfaces::clientmode::CUserCmd,
+) -> bool;
+
+unsafe extern "C" fn create_move(
+    thisptr: *mut usize,
+    flInputSampleTime: f32,
+    cmd: *mut interfaces::clientmode::CUserCmd,
+) -> bool {
+    (transmute::<*mut c_void, CreateMoveFn>((*CREATEMOVE_HOOK.0).original))(
+        thisptr,
+        flInputSampleTime,
+        cmd,
+    );
+
+    if (*cmd).tick_count != 0 {
+        crate::aimbot::create_move(cmd);
+    }
+
+    true
 }
 
 #[derive(Clone, Copy)]
@@ -167,30 +199,54 @@ unsafe extern "C" fn paint(thisptr: *mut usize, paint_mode: PaintMode) {
                     continue;
                 }
 
-                if entity.get_health() > 0 && !entity.is_dormant() && entity.get_team_num() != local_player.get_team_num() {
+                if entity.get_health() > 0
+                    && !entity.is_dormant()
+                    && entity.get_team_num() != local_player.get_team_num()
+                {
                     // draw skeleton
-                    let model = interfaces::INTERFACES.modelinfo.get_studio_model(&*entity.get_model());
+                    let model = interfaces::INTERFACES
+                        .modelinfo
+                        .get_studio_model(&*entity.get_model());
                     if !model.is_null() {
                         let mut bone_matrix: [vecmath::Matrix3x4<f32>; 128] = std::mem::zeroed(); // SAFETY: all values will be initialized
                         if entity.setup_bones(&mut bone_matrix as _, 128, 0x00000100, 0.0) {
                             let numbones = (*model).numbones;
                             for i in 0..numbones {
                                 let bone = (*model).bone(i);
-                                if !bone.is_null() && ((*bone).flags & 0x00000100) != 0 && (*bone).parent != -1 {
-                                    let screen_bone_pos = interfaces::debugoverlay::world_to_screen(&cgmath::vec3(bone_matrix[i as usize][0][3], bone_matrix[i as usize][1][3], bone_matrix[i as usize][2][3]));
-                                    let screen_parent_bone_pos = interfaces::debugoverlay::world_to_screen(&cgmath::vec3(bone_matrix[(*bone).parent as usize][0][3], bone_matrix[(*bone).parent as usize][1][3], bone_matrix[(*bone).parent as usize][2][3]));
-                                    if screen_bone_pos.is_some() && screen_parent_bone_pos.is_some() {
-                                        interfaces::surface::draw_line(screen_bone_pos.unwrap().x as i32, screen_bone_pos.unwrap().y as i32, screen_parent_bone_pos.unwrap().x as i32, screen_parent_bone_pos.unwrap().y as i32, Color::new_rgb(255, 0, 0));
+                                if !bone.is_null()
+                                    && ((*bone).flags & 0x00000100) != 0
+                                    && (*bone).parent != -1
+                                {
+                                    let screen_bone_pos =
+                                        interfaces::debugoverlay::world_to_screen(&cgmath::vec3(
+                                            bone_matrix[i as usize][0][3],
+                                            bone_matrix[i as usize][1][3],
+                                            bone_matrix[i as usize][2][3],
+                                        ));
+                                    let screen_parent_bone_pos =
+                                        interfaces::debugoverlay::world_to_screen(&cgmath::vec3(
+                                            bone_matrix[(*bone).parent as usize][0][3],
+                                            bone_matrix[(*bone).parent as usize][1][3],
+                                            bone_matrix[(*bone).parent as usize][2][3],
+                                        ));
+                                    if screen_bone_pos.is_some() && screen_parent_bone_pos.is_some()
+                                    {
+                                        interfaces::surface::draw_line(
+                                            screen_bone_pos.unwrap().x as i32,
+                                            screen_bone_pos.unwrap().y as i32,
+                                            screen_parent_bone_pos.unwrap().x as i32,
+                                            screen_parent_bone_pos.unwrap().y as i32,
+                                            Color::new_rgb(255, 255, 255),
+                                        );
                                     }
                                 }
                             }
                         }
                     }
-                    
+
                     let mut origin = entity.get_origin();
                     origin.z += 50.0;
-                    let origin_w2s =
-                        super::interfaces::debugoverlay::world_to_screen(&origin);
+                    let origin_w2s = super::interfaces::debugoverlay::world_to_screen(&origin);
 
                     if !origin_w2s.is_some() {
                         continue;
@@ -204,8 +260,8 @@ unsafe extern "C" fn paint(thisptr: *mut usize, paint_mode: PaintMode) {
                     let w: i32 = width;
                     let h: i32 = height;
 
-                    interfaces::surface::draw_box(x1, y1, w, h, Color::new_rgb(255, 0, 0));
-                }   
+                    interfaces::surface::draw_box(x1, y1, w, h, Color::new_rgb(255, 0, 255));
+                }
             }
         }
     }

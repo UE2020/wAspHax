@@ -57,10 +57,7 @@ impl CEntity {
     }
 
     pub fn collideable(&self) -> *mut usize {
-        self.get_value(netvars::get_netvar_offset!(
-            "DT_BaseEntity",
-            "m_Collision"
-        ))
+        self.get_value(netvars::get_netvar_offset!("DT_BaseEntity", "m_Collision"))
     }
 
     /// Check if the entity is scoped.
@@ -73,6 +70,13 @@ impl CEntity {
         self.get_value(netvars::get_netvar_offset!(
             "DT_BasePlayer",
             "m_bIsDefusing"
+        ))
+    }
+
+    pub fn active_weapon(&self) -> *mut usize {
+        self.get_value(netvars::get_netvar_offset!(
+            "DT_CSPlayer",
+            "m_hActiveWeapon"
         ))
     }
 
@@ -94,9 +98,42 @@ impl CEntity {
         ))
     }
 
+    pub fn get_view_offset(&self) -> Vector3<f32> {
+        self.get_value(netvars::get_netvar_offset!(
+            "DT_BasePlayer",
+            "m_vecViewOffset[0]"
+        ))
+    }
+
+    pub fn calculate_eye_position(&self) -> Vector3<f32> {
+        self.get_origin() + {
+            if self.get_view_offset().z > 0.0 {
+                self.get_view_offset()
+            } else {
+                Vector3::new(
+                    0.0,
+                    0.0,
+                    if (self.flags() & (1 << 1)) != 0 {
+                        46.0
+                    } else {
+                        44.0
+                    },
+                )
+            }
+        }
+    }
+
+    pub fn flags(&self) -> i32 {
+        self.get_value(netvars::get_netvar_offset!("DT_CSPlayer", "m_fFlags"))
+    }
+
     /// Check whether the entity is dormant.
     pub fn is_dormant(&self) -> bool {
-        unsafe { transmute::<_, DormantFn>(get_virtual_function(self.networkable(), 9))(self.networkable()) }
+        unsafe {
+            transmute::<_, DormantFn>(get_virtual_function(self.networkable(), 9))(
+                self.networkable(),
+            )
+        }
     }
 
     /// Check whether the entity is a player.
@@ -116,15 +153,36 @@ impl CEntity {
 
     pub fn get_model(&self) -> *mut super::interfaces::modelinfo::CModel {
         unsafe {
-            type Fn = unsafe extern "thiscall" fn(*mut usize) -> *mut super::interfaces::modelinfo::CModel;
+            type Fn = unsafe extern "thiscall" fn(
+                *mut usize,
+            )
+                -> *mut super::interfaces::modelinfo::CModel;
             transmute::<_, Fn>(get_virtual_function(self.renderable(), 8))(self.renderable())
         }
     }
 
-    pub fn setup_bones(&self, bone_matrix: *mut vecmath::Matrix3x4<f32>, max_bones: i32, bone_mask: i32, curtime: f32) -> bool {
+    pub fn setup_bones(
+        &self,
+        bone_matrix: *mut vecmath::Matrix3x4<f32>,
+        max_bones: i32,
+        bone_mask: i32,
+        curtime: f32,
+    ) -> bool {
         unsafe {
-            type Fn = unsafe extern "thiscall" fn(*mut usize, *mut vecmath::Matrix3x4<f32>, i32, i32, f32) -> bool;
-            transmute::<_, Fn>(get_virtual_function(self.renderable(), 13))(self.renderable(), bone_matrix, max_bones, bone_mask, curtime)
+            type Fn = unsafe extern "thiscall" fn(
+                *mut usize,
+                *mut vecmath::Matrix3x4<f32>,
+                i32,
+                i32,
+                f32,
+            ) -> bool;
+            transmute::<_, Fn>(get_virtual_function(self.renderable(), 13))(
+                self.renderable(),
+                bone_matrix,
+                max_bones,
+                bone_mask,
+                curtime,
+            )
         }
     }
 

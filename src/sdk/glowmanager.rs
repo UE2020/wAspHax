@@ -1,3 +1,5 @@
+/// CGlowObjectManager is deprecated and should not be used.
+
 #[derive(Debug)]
 pub struct CGlowObjectManager {
     base: *mut usize,

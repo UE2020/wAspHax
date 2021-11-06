@@ -12,6 +12,8 @@ pub mod scan;
 pub mod sdk;
 pub mod util;
 
+pub mod aimbot;
+
 use log::*;
 use simplelog::*;
 
@@ -35,6 +37,8 @@ fn main_thread() {
     }
 
     info!("Game loaded");
+
+    thread::sleep(Duration::from_millis(2000));
 
     // Initialize netvars
     sdk::netvars::init();

@@ -95,7 +95,7 @@ pub struct ClientClass {
     pub class_id: crate::sdk::classes::EClassIds,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct CBaseClient {
     pub base: *mut usize,
 }

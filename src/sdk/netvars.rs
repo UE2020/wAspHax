@@ -1,6 +1,7 @@
 use maplit::hashmap;
 use std::collections::HashMap;
 use std::ffi::CStr;
+use std::mem::transmute;
 use std::sync::Mutex;
 
 #[derive(PartialEq, Eq, Hash)]
@@ -82,7 +83,34 @@ lazy_static::lazy_static! {
         NetvarPair::new("DT_FogController", "m_fog.maxdensity") => 0,
         NetvarPair::new("DT_FogController", "m_fog.colorPrimary") => 0,
     });
+
+    pub static ref DATA: Offsets = unsafe {
+        Offsets {
+            move_data: *transmute::<_, *mut *mut usize>(crate::util::get_abs_addr(
+                crate::scan::find_first_in_module(
+                    "/client_client.so",
+                    "48 8B 0D ? ? ? ? 4C 89 EA"
+                ).unwrap() as usize,
+                3, 7
+            )),
+            move_helper: *transmute::<_, *mut *mut usize>(crate::util::get_abs_addr(
+                crate::scan::find_first_in_module(
+                    "/client_client.so",
+                    "00 48 89 3D ? ? ? ? C3"
+                ).unwrap() as usize + 1,
+                3, 7
+            ))
+        }
+    };
 }
+
+pub struct Offsets {
+    pub move_data: *mut usize,
+    pub move_helper: *mut usize,
+}
+
+unsafe impl Sync for Offsets {}
+unsafe impl Send for Offsets {}
 
 /// Lock the global netvars map and retreive a netvar.
 #[macro_export]
@@ -165,4 +193,7 @@ pub fn init() {
         };
         log::info!("{}::{} = 0x{:X}", pair.first, pair.second, *offset);
     }
+
+    log::info!("Initializing DATA...");
+    lazy_static::initialize(&DATA);
 }

@@ -1,16 +1,18 @@
 use std::ffi::{CStr, CString};
 use std::mem::transmute;
 
-use crate::util::c_str;
+use crate::util::{self, c_str};
 
 pub mod baseclient;
+pub mod clientmode;
 pub mod debugoverlay;
 pub mod engine;
 pub mod entitylist;
+pub mod modelinfo;
 pub mod panel;
 pub mod surface;
 pub mod vgui;
-pub mod modelinfo;
+pub mod enginetrace;
 
 type InstantiateInterfaceFn = unsafe extern "C" fn() -> *mut usize;
 
@@ -77,6 +79,8 @@ pub struct Interfaces {
     pub engine: engine::CEngineClient,
     pub vgui: vgui::CEngineVGui,
     pub modelinfo: modelinfo::CModelInfo,
+    pub clientmode: clientmode::CClientMode,
+    pub trace: enginetrace::CEngineTrace,
 }
 
 unsafe impl Send for Interfaces {}
@@ -85,12 +89,13 @@ unsafe impl Sync for Interfaces {}
 lazy_static::lazy_static! {
     pub static ref INTERFACES: Interfaces = unsafe {
         log::info!("Lazy loading interfaces...");
+        let client = baseclient::CBaseClient::from_raw(get_interface(
+            "./csgo/bin/linux64/client_client.so",
+            "VClient",
+            false,
+        ));
         Interfaces {
-            baseclient: baseclient::CBaseClient::from_raw(get_interface(
-                "./csgo/bin/linux64/client_client.so",
-                "VClient",
-                false,
-            )),
+            baseclient: client,
             entitylist: entitylist::CEntityList::from_raw(get_interface(
                 "./csgo/bin/linux64/client_client.so",
                 "VClientEntityList",
@@ -124,6 +129,28 @@ lazy_static::lazy_static! {
             modelinfo: modelinfo::CModelInfo::from_raw(get_interface(
                 "./bin/linux64/engine_client.so",
                 "VModelInfoClient",
+                false,
+            )),
+            clientmode: {
+                let hudprocessinput = util::get_virtual_table(client.base as *mut libc::c_void, 0);
+                log::debug!("hudprocessinput: {:p}", hudprocessinput);
+                let hudprocessinput = transmute::<_, usize>(*hudprocessinput.offset(10));
+                log::debug!("hudprocessinput after offset: 0x{:x}", hudprocessinput);
+
+                let get_client_mode = util::get_abs_addr(hudprocessinput + 11, 1, 5);
+                log::debug!("get_client_mode: 0x{:x}", get_client_mode);
+
+                type Fn = unsafe extern "C" fn() -> *mut usize;
+                let get_client_mode = transmute::<_, Fn>(get_client_mode);
+                log::debug!("Calling get_client_mode()...");
+                let result = clientmode::CClientMode::from_raw(get_client_mode());
+                log::debug!("get_client_mode() called, resulting pointer is: {:p}", get_client_mode());
+                result
+            },
+
+            trace: enginetrace::CEngineTrace::from_raw(get_interface(
+                "./bin/linux64/engine_client.so",
+                "EngineTraceClient",
                 false,
             )),
         }
