@@ -41,8 +41,32 @@ fn angle_length(angle: &cgmath::Vector3<f32>) -> f32 {
 }
 
 /// Checks whether a player is visible, given anything bones.
-pub fn visibility_check(player: crate::sdk::entity::CEntity, bones: &[vecmath::Matrix3x4<f32>; 128]) {
-    
+pub fn visibility_check(local_player: crate::sdk::entity::CEntity, player: crate::sdk::entity::CEntity, bone_matrix: &[vecmath::Matrix3x4<f32>; 128]) -> bool {
+    let mut filter: interfaces::enginetrace::CTraceFilter = interfaces::enginetrace::CTraceFilter::new(local_player.base);
+
+    let head =  cgmath::vec3(
+        bone_matrix[8][0][3],
+        bone_matrix[8][1][3],
+        bone_matrix[8][2][3],
+    );
+
+    let mut trace_to_head: interfaces::enginetrace::Trace = unsafe { std::mem::zeroed() };
+    let mut ray_to_head = interfaces::enginetrace::Ray::new(local_player.calculate_eye_position(), head);
+
+    INTERFACES.trace.trace_ray(&mut ray_to_head, 0x1 | 0x80 | 0x4000 | 0x2000, &mut filter, &mut trace_to_head);
+
+    let spine =  cgmath::vec3(
+        bone_matrix[6][0][3],
+        bone_matrix[6][1][3],
+        bone_matrix[6][2][3],
+    );
+
+    let mut trace_to_spine: interfaces::enginetrace::Trace = unsafe { std::mem::zeroed() };
+    let mut ray_to_spine = interfaces::enginetrace::Ray::new(local_player.calculate_eye_position(), spine);
+
+    INTERFACES.trace.trace_ray(&mut ray_to_spine, 0x1 | 0x80 | 0x4000 | 0x2000, &mut filter, &mut trace_to_spine);
+
+    (trace_to_head.m_pEntityHit == player.base && trace_to_spine.m_pEntityHit == player.base)
 }
 
 pub fn create_move(cmd: *mut crate::sdk::interfaces::clientmode::CUserCmd) {
@@ -63,8 +87,8 @@ pub fn create_move(cmd: *mut crate::sdk::interfaces::clientmode::CUserCmd) {
             if weapon.is_null() {
                 return;
             }
-            const SMOOTHING: f32 = 1.0 + (64.0 / 5.0);
-            const FOV: f32 = 20.0 / 10.0;
+            const SMOOTHING: f32 = 1.0 + (32.0 / 5.0);
+            const FOV: f32 = 30.0 / 10.0;
 
             let mut closest_delta = std::f32::MAX;
             let mut angle_to_closest_bone = cgmath::Vector3::new(0.0, 0.0, 0.0);
@@ -85,6 +109,9 @@ pub fn create_move(cmd: *mut crate::sdk::interfaces::clientmode::CUserCmd) {
                         let mut bone_matrix: [vecmath::Matrix3x4<f32>; 128] =
                             unsafe { std::mem::zeroed() }; // SAFETY: all values will be initialized
                         if entity.setup_bones(&mut bone_matrix as _, 128, 0x000FFF00, 0.0) {
+                            if !visibility_check(local_player, entity, &bone_matrix) {
+                                continue;
+                            }
                             let local_player_eye_position = local_player.calculate_eye_position();
 
                             let model = unsafe {
@@ -103,7 +130,7 @@ pub fn create_move(cmd: *mut crate::sdk::interfaces::clientmode::CUserCmd) {
                                     &local_player_eye_position,
                                     &target_bone_position,
                                 ) - unsafe { (*cmd).viewangles }
-                                    - local_player.get_aim_punch() * 2.0;
+                                    - ((local_player.get_aim_punch() * 5.0));
                                 normalize_angles(&mut angle_to_current_bone);
 
                                 if angle_length(&angle_to_current_bone) < closest_delta {
@@ -118,7 +145,7 @@ pub fn create_move(cmd: *mut crate::sdk::interfaces::clientmode::CUserCmd) {
 
             if closest_delta < FOV {
                 unsafe {
-                    (*cmd).viewangles += angle_to_closest_bone / SMOOTHING;
+                    (*cmd).viewangles += (angle_to_closest_bone / (SMOOTHING / (closest_delta / 2.0)));
                 }
             }
         }

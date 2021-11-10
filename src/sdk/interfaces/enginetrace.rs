@@ -36,7 +36,7 @@ pub struct Surface {
 pub struct Trace {
     startpos: cgmath::Vector3<f32>,
     endpos: cgmath::Vector3<f32>,
-    plane: Plane,
+    puplane: Plane,
 
     fraction: f32,
 
@@ -54,7 +54,7 @@ pub struct Trace {
     physicsbone: i16,
 
     world_surface_index: u16,
-    m_pEntityHit: *mut usize,
+    pub m_pEntityHit: *mut usize,
     hitbox: i32,
 }
 
@@ -127,8 +127,48 @@ impl Ray {
 #[repr(C)]
 pub struct CTraceFilter {
     vptr: *mut usize,
-    pSkip: *mut usize,
+    pub pSkip: *mut usize,
 }
+
+impl CTraceFilter {
+    pub fn new(skip: *mut usize) -> Self {
+        CTraceFilter {
+            vptr: unsafe { transmute(&TRACE_FUNC_VT) },
+            pSkip: skip,
+        }
+    }
+}
+
+#[vtable::vtable]
+#[repr(C)]
+struct TraceFuncsVTable {
+    should_hit_entity: extern "C" fn(
+        *mut usize,
+        pEntity: *mut usize,
+        contentsMask: i32,
+    ) -> bool,
+
+    get_trace_type: extern "C" fn(
+        *mut usize,
+    ) -> i32,
+}
+
+impl TraceFuncs for CTraceFilter {
+    fn should_hit_entity(
+        this: *mut usize,
+        pEntity: *mut usize,
+        contentsMask: i32,
+    ) -> bool {
+        let this = this as *mut CTraceFilter;
+        unsafe { !(pEntity == (*this).pSkip) }
+    }
+
+    fn get_trace_type(this: *mut usize) -> i32 {
+        0
+    }
+}
+
+TraceFuncsVTable_static!(static TRACE_FUNC_VT for CTraceFilter);
 
 #[derive(Debug)]
 pub struct CEngineTrace {
@@ -140,13 +180,10 @@ impl CEngineTrace {
         Self { base: addr }
     }
 
-    pub fn trace_ray(&self, ray: &mut Ray, mask: u32, trace_filter: &mut CTraceFilter, trace: &mut Trace) -> String {
+    pub fn trace_ray(&self, ray: &mut Ray, mask: u32, trace_filter: &mut CTraceFilter, trace: &mut Trace) {
         unsafe {
-            type Fn = unsafe extern "thiscall" fn(*const usize, ray: *mut Ray, u32, *mut CTraceFilter, trace: *mut Trace) -> *const i8;
-            let result =
-                transmute::<_, Fn>(util::get_virtual_function(self.base, 5))(self.base, ray as _, mask, trace_filter as _, trace as _);
-            let result = CStr::from_ptr(result as *mut i8);
-            result.to_str().unwrap().to_owned()
+            type Fn = unsafe extern "thiscall" fn(*const usize, ray: *mut Ray, u32, *mut usize, trace: *mut Trace) -> *const i8;
+            transmute::<_, Fn>(util::get_virtual_function(self.base, 5))(self.base, ray as _, mask, trace_filter as *mut CTraceFilter as _, trace as _);
         }
     }
 }
