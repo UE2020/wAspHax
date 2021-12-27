@@ -168,7 +168,7 @@ type PaintFn = unsafe extern "C" fn(thisptr: *mut usize, paint_mode: PaintMode);
 unsafe extern "C" fn paint(thisptr: *mut usize, paint_mode: PaintMode) {
     (transmute::<*mut c_void, PaintFn>((*PAINT_HOOK.0).original))(thisptr, paint_mode);
 
-/*    if !interfaces::INTERFACES.engine.is_in_game() {
+    if !interfaces::INTERFACES.engine.is_in_game() {
         return;
     }
 
@@ -264,7 +264,7 @@ unsafe extern "C" fn paint(thisptr: *mut usize, paint_mode: PaintMode) {
                 }
             }
         }
-    }*/
+    }
 }
 
 /*type PaintTraverseFn = unsafe extern "C" fn(thisptr: *mut usize, panel: u64, force_repaint: bool, allow_force: bool);
