@@ -89,8 +89,8 @@ pub fn create_move(cmd: *mut crate::sdk::interfaces::clientmode::CUserCmd) {
             if weapon.is_null() {
                 return;
             }
-            const SMOOTHING: f32 = 1.0; //1.0 + (32.0 / 5.0);
-            const FOV: f32 = 1000.0; //30.0 / 10.0;
+            const SMOOTHING: f32 = 1.0 + (32.0 / 5.0);
+            const FOV: f32 = 30.0 / 10.0;
 
             let mut closest_delta = std::f32::MAX;
             let mut angle_to_closest_bone = cgmath::Vector3::new(0.0, 0.0, 0.0);
@@ -147,14 +147,14 @@ pub fn create_move(cmd: *mut crate::sdk::interfaces::clientmode::CUserCmd) {
 
             if closest_delta < FOV {
                 unsafe {
-                    //(*cmd).viewangles += (angle_to_closest_bone / (SMOOTHING / (closest_delta / 2.0)));
+                    (*cmd).viewangles += (angle_to_closest_bone / (SMOOTHING / (closest_delta / 2.0)));
                     if !SHOT_LAST_TICK {
-                        (*cmd).buttons |= 1 << 0;
+                        //(*cmd).buttons |= 1 << 0;
                         SHOT_LAST_TICK = true;
                     } else {
                         SHOT_LAST_TICK = false;
                     }
-                    (*cmd).viewangles += angle_to_closest_bone / SMOOTHING;
+                    //(*cmd).viewangles += angle_to_closest_bone / SMOOTHING;
                 }
             } else {
                 unsafe {
