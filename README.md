@@ -6,11 +6,14 @@ EZ hacks for CS:GO
 
 Build it (if you're retarded it won't work)
 ```
-cargo build --release```
+cargo build --release
+```
 
 Inject it
+
 ```
-./inject/sh```
+./inject/sh
+```
 
 Make sure you chmod the injection script lOl
 If you don't know what that means you shouldn't be cheating anyways.
