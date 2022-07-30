@@ -4,7 +4,7 @@ EZ hacks for CS:GO
 
 # Usage
 
-Build it (if you're retarded it won't work)
+Build it (if you're stupid it won't work)
 ```
 cargo build --release
 ```
