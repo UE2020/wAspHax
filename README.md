@@ -12,7 +12,7 @@ cargo build --release
 Inject it
 
 ```
-./inject/sh
+./inject.sh
 ```
 
 Make sure you chmod the injection script lOl
