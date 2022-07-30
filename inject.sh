@@ -1,11 +1,8 @@
 #!/bin/bash
 
-gdb="$(dirname "$0")/gdb" # For using a gdb build such as the cathook one (The one included)
-libname="libgamemodeauto.so.0" # Pretend to be gamemode, change this to another lib that may be in /maps (if already using real gamemode, I'd suggest using libMangoHud.so)
+gdb="$(dirname "$0")/gdb"
+libname="libgamemodeauto.so.0"
 csgo_pid=$(pidof csgo_linux64)
-
-# Set to true to compile with clang. (if changing to true, make sure to delete the build directory from gcc)
-export USE_CLANG="false"
 
 if [[ $EUID -eq 0 ]]; then
     echo "You cannot run this as root." 
@@ -72,19 +69,6 @@ function build {
     cargo build --release
 }
 
-function build_debug {
-    echo "Building cheat..."
-    mkdir -p build
-    cd build
-    cmake -D CMAKE_BUILD_TYPE=Debug ..
-    make -j $(nproc --all)
-    cd ..
-}
-
-function pull {
-    git pull
-}
-
 while [[ $# -gt 0 ]]
 do
 keys="$1"
@@ -105,14 +89,6 @@ case $keys in
         build
         shift
         ;;
-    -bd|--build_debug)
-        build_debug
-        shift
-        ;;
-    -p|--pull)
-        pull
-        shift
-        ;;
     -h|--help)
         echo "
  help
@@ -124,8 +100,6 @@ Toolbox script for wasphax the beste lincuck cheat 2021
 | -l (--load)          | Load/inject the cheat via gdb.               |
 | -ld (--load_debug)   | Load/inject the cheat and debug via gdb.     |
 | -b (--build)         | Build to the build/ dir.                     |
-| -bd (--build_debug)  | Build to the build/ dir as debug.            |
-| -p (--pull)          | Update the cheat.                            |
 | -h (--help)          | Show help.                                   |
 =======================================================================
 All args are executed in the order they are written in, for
