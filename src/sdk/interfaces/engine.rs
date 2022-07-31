@@ -1,5 +1,6 @@
 use crate::util::get_virtual_function;
 use std::mem::transmute;
+use core::mem::ManuallyDrop;
 
 #[repr(C)]
 pub struct CPlayerInfoDataID {
@@ -10,7 +11,7 @@ pub struct CPlayerInfoDataID {
 #[repr(C)]
 pub union CPlayerInfoData {
     xuid: i64,
-    data: CPlayerInfoDataID,
+    data: ManuallyDrop<CPlayerInfoDataID>,
 }
 
 #[repr(C)]

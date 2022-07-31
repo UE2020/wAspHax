@@ -66,7 +66,7 @@ function load_debug {
 
 function build {
     echo "Building cheat..."
-    cargo build --release
+    cargo +nightly build --release
 }
 
 while [[ $# -gt 0 ]]
