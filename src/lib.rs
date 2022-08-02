@@ -1,6 +1,6 @@
 #![feature(abi_thiscall)]
-#![feature(untagged_unions)]
 #![feature(const_raw_ptr_deref)]
+// #![feature(untagged_unions)] Not supported anymore
 
 use ctor::*;
 use std::thread;
