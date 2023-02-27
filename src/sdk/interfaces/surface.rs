@@ -3,6 +3,7 @@ use std::os::raw::c_int;
 
 use crate::util;
 
+#[repr(i32)]
 pub enum EFontFlags {
     FontflagNone,
     FontflagItalic = 0x001,
